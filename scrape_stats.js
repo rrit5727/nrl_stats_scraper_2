@@ -9,8 +9,8 @@ const path = require('path');
   // URL to scrape match links
   const baseUrl = 'https://fantasy.nrl.com';
 
-  console.log(`Scraping match links from: ${baseUrl}/match-centre`);
-  await page.goto(`${baseUrl}/match-centre`);
+  console.log(`Scraping match links from: ${baseUrl}/match-centre/2`);
+  await page.goto(`${baseUrl}/match-centre/1`);
 
   // Wait for the match links to load
   await page.waitForSelector('a.match-data');
