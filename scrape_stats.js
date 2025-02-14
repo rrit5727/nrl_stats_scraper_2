@@ -25,7 +25,7 @@ const path = require('path');
   console.log(`Found ${urls.length} match links.`);
 
   // Manually removed TOG column - check if this affects the correct allocation of stats to columns
-  let headers = ['Round', 'Player', 'Team', 'Age', 'POS1', 'POS2', 'Price', 'Priced at', 'PTS', 'MP', 'AVG', 'T', 'TS', 'G', 'FG', 'TA', 'LB', 'LBA', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'TO', 'FTF', 'MG', 'KM', 'KD', 'PC', 'SB', 'SO', 'FGO', 'SAI', 'EFIG', '', 'Total base', '', 'Base exceeds price premium'];
+  let headers = ['Round', 'Player', 'Team', 'Age', 'POS1', 'POS2', 'Price', 'Priced at', 'PTS', 'MP', 'AVG', 'T', 'TS', 'G', 'FG', 'TA', 'LB', 'LBA', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'TO', 'FTF', 'MG', 'KM', 'KD', 'PC', 'SB', 'SO', 'FDO', 'SAI', 'EFIG', '', 'Total base', '', 'Base exceeds price premium'];
   const statColumns = await page.$$('.column[class*="js-order-by"]');
   for (const column of statColumns) {
     const header = await column.getAttribute('data-order-by');
@@ -152,7 +152,7 @@ const path = require('path');
         { header: 'PC', class: 'match_stats.PC' },
         { header: 'SB', class: 'match_stats.SB' },
         { header: 'SO', class: 'match_stats.SO' },
-        { header: 'FGO', class: 'match_stats.FGO' },
+        { header: 'FDO', class: 'match_stats.FDO' },
         { header: 'SAI', class: 'match_stats.SAI' },
         { header: 'EFIG', class: 'match_stats.EFIG' }
       ];
@@ -181,7 +181,7 @@ const path = require('path');
       }
 
       // Calculate Total base
-      const baseStats = ['G', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'MG', 'KM', 'KD', 'FGO', 'EFIG'];
+      const baseStats = ['G', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'MG', 'KM', 'KD', 'FDO', 'EFIG'];
       let totalBase = 0;
 
       // Sum up base stats
