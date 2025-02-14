@@ -20,11 +20,12 @@ const path = require('path');
     links.map((link) => link.getAttribute('href'))
   );
 
-  // Build full URLs (avoid duplicate 'match-centre')
+  // Build full URLs
   const urls = matchLinks.map((path) => `${baseUrl}${path}`);
   console.log(`Found ${urls.length} match links.`);
 
-  let headers = ['Round', 'Player', 'Team', 'POS1', 'POS2', 'Cost', 'PTS', 'MP', 'Average Points', 'TOG', 'T', 'TS', 'G', 'FG', 'TA', 'LB', 'LBA', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'TO', 'FTF', 'MG', 'KM', 'KD', 'PC', 'SB', 'SO', 'FGO', 'SAI', 'EFIG'];
+  // Manually removed TOG column - check if this affects the correct allocation of stats to columns
+  let headers = ['Round', 'Player', 'Team', 'Age', 'POS1', 'POS2', 'Price', 'Priced at', 'PTS', 'MP', 'AVG', 'T', 'TS', 'G', 'FG', 'TA', 'LB', 'LBA', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'TO', 'FTF', 'MG', 'KM', 'KD', 'PC', 'SB', 'SO', 'FGO', 'SAI', 'EFIG', '', 'Total base', '', 'Base exceeds price premium'];
   const statColumns = await page.$$('.column[class*="js-order-by"]');
   for (const column of statColumns) {
     const header = await column.getAttribute('data-order-by');
@@ -45,8 +46,9 @@ const path = require('path');
     await page.goto(url);
 
     // Extract round number from URL
-    const roundMatch = url.match(/match-centre\/(\d+)$/);
+    const roundMatch = url.match(/match-centre\/(\d+)/);
     const roundNumber = roundMatch ? roundMatch[1] : '';
+    console.log(`Processing round: ${roundNumber}`);
 
     // Wait for the stats table to load
     await page.waitForSelector('.match-centre-row');
@@ -55,7 +57,8 @@ const path = require('path');
     const rows = await page.$$('.match-centre-row');
     for (const row of rows) {
       const playerData = {
-        'Round': roundNumber  // Add round number as first column
+        'Round': roundNumber,
+        'Age': '',  // Add empty Age column
       };
       
       // Get player name and team info
@@ -88,11 +91,16 @@ const path = require('path');
           playerData['POS2'] = posArray[1] || '';
         }
 
-        // Get player cost
+        // Get player cost and convert to number
         const costElement = await playerInfo.$('.player-cost');
         if (costElement) {
           const cost = await costElement.innerText();
-          playerData['Cost'] = cost.trim();
+          // Remove '$' and 'K', convert to number and multiply by 1000
+          const priceNumber = parseInt(cost.replace(/[\$K]/g, '')) * 1000;
+          playerData['Price'] = priceNumber;
+          
+          // Calculate 'Priced at' value
+          playerData['Priced at'] = Math.round(priceNumber / 13700);
         }
       }
 
@@ -113,11 +121,11 @@ const path = require('path');
         playerData['MP'] = isNaN(numericMp) ? '' : numericMp;
       }
 
-      // Get average points
+      // Get average points and round to nearest number
       const avgPointsElement = await row.$('.column[data-order-by="stats.avg_points"]');
       if (avgPointsElement) {
         const avgPoints = await avgPointsElement.innerText();
-        playerData['Average Points'] = avgPoints.trim();
+        playerData['AVG'] = Math.round(parseFloat(avgPoints.trim()));
       }
 
       // Get all other stat values
@@ -170,6 +178,37 @@ const path = require('path');
         } else {
           playerData[stat.header] = '';
         }
+      }
+
+      // Calculate Total base
+      const baseStats = ['G', 'TCK', 'TB', 'MT', 'OFG', 'OFH', 'ER', 'MG', 'KM', 'KD', 'FGO', 'EFIG'];
+      let totalBase = 0;
+
+      // Sum up base stats
+      for (const stat of baseStats) {
+        if (playerData[stat] && playerData[stat] !== '-') {
+          totalBase += parseFloat(playerData[stat]) || 0;
+        }
+      }
+
+      // Add TA/2 for HLF or WFB positions
+      if ((playerData['POS1'] === 'HLF' || playerData['POS2'] === 'HLF' || 
+           playerData['POS1'] === 'WFB' || playerData['POS2'] === 'WFB') && 
+          playerData['TA'] && playerData['TA'] !== '-') {
+        totalBase += (parseFloat(playerData['TA']) || 0) / 2;
+      }
+
+      // Add TS for WFB position
+      if ((playerData['POS1'] === 'WFB' || playerData['POS2'] === 'WFB') && 
+          playerData['TS'] && playerData['TS'] !== '-') {
+        totalBase += parseFloat(playerData['TS']) || 0;
+      }
+
+      playerData['Total base'] = totalBase;
+
+      // Calculate Base exceeds price premium
+      if (playerData['Priced at'] !== undefined) {
+        playerData['Base exceeds price premium'] = totalBase - playerData['Priced at'];
       }
 
       allPlayersData.push(playerData);
