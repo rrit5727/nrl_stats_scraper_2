@@ -99,8 +99,11 @@ const path = require('path');
           const priceNumber = parseInt(cost.replace(/[\$K]/g, '')) * 1000;
           playerData['Price'] = priceNumber;
           
-          // Calculate 'Priced at' value
-          playerData['Priced at'] = Math.round(priceNumber / 13700);
+          // Calculate 'Priced at' value with 2 decimal places
+          playerData['Priced at'] = (priceNumber / 13500).toFixed(2);
+          
+          // Add the divisor as a constant value
+          playerData['Divisor'] = 13500;
         }
       }
 
@@ -112,13 +115,17 @@ const path = require('path');
       }
 
       // Get MP (minutes played / time on ground)
-      const mpElement = await row.$('.column[data-order-by="match_stats.TOG"] .score');
+      const mpElement = await row.$('.column[data-order-by="match_stats.TOG"]');
       if (mpElement) {
-        const mp = await mpElement.innerText();
-        // Clean up the value (remove parentheses and convert to number if possible)
-        const cleanMp = mp.trim().replace(/[()]/g, '').replace('-', '');
-        const numericMp = parseFloat(cleanMp);
-        playerData['MP'] = isNaN(numericMp) ? '' : numericMp;
+        // Get the text content of the div, which includes the MP value
+        const mp = await mpElement.textContent();
+        
+        // Extract just the number (80) from the string
+        const mpMatch = mp.match(/\s*(\d+)\s*/);
+        if (mpMatch) {
+          const numericMp = parseInt(mpMatch[1], 10);
+          playerData['MP'] = isNaN(numericMp) ? '' : numericMp;
+        }
       }
 
       // Get average points and round to nearest number
